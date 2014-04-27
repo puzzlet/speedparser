@@ -16,10 +16,14 @@ LIMITATIONS:
 
 import re
 import time
-import urlparse
 import chardet
-from lxml import etree
+import six
+from lxml import etree, html
 from lxml.html import clean
+try:
+    from urlparse import urljoin
+except ImportError:
+    from urllib.parse import urljoin
 
 try:
     import feedparser
@@ -92,7 +96,7 @@ def strip_outer_tag(text):
     """Strips the outer tag, if text starts with a tag.  Not entity aware;
     designed to quickly strip outer tags from lxml cleaner output.  Only
     checks for <p> and <div> outer tags."""
-    if not text or not isinstance(text, basestring):
+    if not text or not isinstance(text, six.string_types):
         return text
     stripped = text.strip()
     if (stripped.startswith('<p>') or stripped.startswith('<div>')) and \
@@ -100,18 +104,18 @@ def strip_outer_tag(text):
         return stripped[stripped.index('>')+1:stripped.rindex('<')]
     return text
 
-nsre = re.compile(r'xmlns\s*=\s*[\'"](.+?)[\'"]')
+nsre = re.compile(b'''xmlns\s*=\s*['"](.+?)['"]''')
 
 
 def strip_namespace(document):
-    if document[:1000].count('xmlns') > 5:
-        if 'xmlns' not in document[:1000]:
+    if document[:1000].count(b'xmlns') > 5:
+        if b'xmlns' not in document[:1000]:
             return None, document
-    elif 'xmlns' not in document[:400]:
+    elif b'xmlns' not in document[:400]:
         return None, document
     match = nsre.search(document)
     if match:
-        return match.groups()[0], nsre.sub('', document)
+        return str(match.groups()[0]), nsre.sub(b'', document)
     return None, document
 
 
@@ -120,7 +124,7 @@ def munge_author(author):
     the format: "name (email)"."""
     # this loveliness is from feedparser but was not usable as a function
     if '@' in author:
-        emailmatch = re.search(r"(([a-zA-Z0-9\_\-\.\+]+)@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.)|(([a-zA-Z0-9\-]+\.)+))([a-zA-Z]{2,4}|[0-9]{1,3})(\]?))(\?subject=\S+)?", author, re.UNICODE)
+        emailmatch = re.search(r'''(([a-zA-Z0-9\_\-\.\+]+)@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.)|(([a-zA-Z0-9\-]+\.)+))([a-zA-Z]{2,4}|[0-9]{1,3})(\]?))(\?subject=\S+)?''', author)
         if emailmatch:
             email = emailmatch.group(0)
             # probably a better way to do the following, but it passes all the tests
@@ -142,27 +146,27 @@ def munge_author(author):
 
 def reverse_namespace_map(nsmap):
     d = fpnamespaces.copy()
-    d.update(dict([(v, k) for (k, v) in nsmap.iteritems()]))
+    d.update(dict([(v, k) for (k, v) in nsmap.items()]))
     return d
 
 
 def base_url(root):
     """Determine the base url for a root element."""
-    for attr, value in root.attrib.iteritems():
+    for attr, value in root.attrib.items():
         if attr.endswith('base') and 'http' in value:
             return value
     return None
 
 
 def full_href(href, base=None):
-    return urlparse.urljoin(base, href)
+    return urljoin(base, href)
 
 
 def full_href_attribs(attribs, base=None):
     if base is None:
         return dict(attribs)
     d = dict(attribs)
-    for key, value in d.iteritems():
+    for key, value in d.items():
         if key == 'href':
             d[key] = full_href(value, base)
     return d
@@ -245,7 +249,7 @@ class SpeedParserEntriesRss20(object):
         self.entries = entries
 
     def clean(self, text):
-        if text and isinstance(text, basestring):
+        if text and isinstance(text, six.string_types):
             return self.cleaner.clean_html(text)
         return text
 
@@ -501,7 +505,7 @@ class SpeedParserFeedRss20(object):
         self.feed = feed
 
     def clean(self, text, outer_tag=True):
-        if text and isinstance(text, basestring):
+        if text and isinstance(text, six.string_types):
             if not outer_tag:
                 txt = self.cleaner.clean_html(text)
                 frag = lxml.html.fragment_fromstring(txt)
@@ -542,7 +546,7 @@ class SpeedParserFeedRss20(object):
         if value:
             feed['generator'] = value
         else:
-            for value in node.attrib.itervalues():
+            for value in node.attrib.values():
                 if 'http://' in value:
                     feed['generator'] = value
 
