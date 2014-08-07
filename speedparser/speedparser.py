@@ -613,7 +613,7 @@ class SpeedParser(object):
             vers = r.attrib['version'].replace('.', '')
         if root_tag in ('rss', 'rdf'):
             tag = 'rss'
-        if root_tag in ('feed'):
+        if root_tag in ('feed', ):
             tag = 'atom'
         if root_tag == 'rss' and vers == '10' and root_tag == 'rss':
             vers = ''
