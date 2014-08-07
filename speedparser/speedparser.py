@@ -677,6 +677,10 @@ def parse(document, clean_html=True, unix_timestamp=False, encoding=None):
     True, the date information will be a numerical unix timestamp rather than a
     struct_time.  If encoding is provided, the encoding of the document will be
     manually set to that."""
+    if isinstance(document, six.text_type):
+        encoding = 'utf8'
+        m = re.find(b'''<\?xml.*?encoding=['"](.*?)['"].*\?>''', document)
+        document = document.encode(encoding)
     if isinstance(clean_html, bool):
         cleaner = default_cleaner if clean_html else fake_cleaner
     else:
@@ -705,9 +709,9 @@ if __name__ == '__main__':
     if len(sys.argv) != 2:
         print("Must provide filename of feed.")
     filename = sys.argv[1]
-    feed = open(filename).read()
-    if '-- END TRACEBACK --' in feed:
-        feed = feed.split('-- END TRACEBACK --')[1].strip()
+    feed = open(filename, 'rb').read()
+    if b'-- END TRACEBACK --' in feed:
+        feed = feed.split(b'-- END TRACEBACK --')[1].strip()
 
     import pprint
     pprint.pprint(parse(feed))
